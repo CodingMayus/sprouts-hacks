@@ -1,9 +1,9 @@
 import google.generativeai as genai
 import json
-from my_secrets import gemini_api_key
+# from my_secrets import gemini_api_key
 
 # Configure the Gemini API
-genai.configure(api_key=gemini_api_key)
+genai.configure(api_key="AIzaSyDrt7pSIzQ7Mlzl7I9ESatrLyZR5KvpRzM")
 
 def create_budget_from_profile(customer_profile: dict) -> dict:
     """

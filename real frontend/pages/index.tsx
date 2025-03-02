@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-
+import Layout from './navbar';
 export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
@@ -31,7 +31,9 @@ export default function Home() {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* <a href="/api/auth/login">Login</a> */}
       <div className="container mx-auto px-4 py-12">
         <Head>
           <title>KoiCash - Financial Planning</title>
@@ -125,5 +127,6 @@ export default function Home() {
         </main>
       </div>
     </div>
+    </>
   );
 }

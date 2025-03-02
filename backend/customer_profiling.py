@@ -1,10 +1,10 @@
 import google.generativeai as genai
-from my_secrets import gemini_api_key
+# from my_secrets import gemini_api_key
 from flask import jsonify
 import json
 
 # Configure the Gemini API
-genai.configure(api_key=gemini_api_key)
+genai.configure(api_key="AIzaSyDrt7pSIzQ7Mlzl7I9ESatrLyZR5KvpRzM")
 
 # list of items: 
 '''
