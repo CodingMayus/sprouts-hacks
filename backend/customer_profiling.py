@@ -62,3 +62,5 @@ def get_customer_profile(client_list: list) -> dict:
         print(client_list)
         print(response.text.strip())
         return []
+
+print(get_customer_profile(['Toronto', 'Ontario', '100000', '2', '30', '100000', '10000']))           

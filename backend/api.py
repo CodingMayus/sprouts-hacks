@@ -1,7 +1,4 @@
 from flask import Flask, request, jsonify
-from customer_profiling import get_customer_profile
-from computer_vision import get_receipt_total
-from financialadvisor import parse_customer_json, create_budget_from_profile, goal_setting
 from my_secrets import gemini_api_key, image_path
 import google.generativeai as genai
 from my_secrets import gemini_api_key
@@ -15,9 +12,8 @@ from my_secrets import gemini_api_key
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-
-@app.route('/parse_customer_json', methods=['POST'])
-def parse_customer_json(json_string: str) -> dict:
+@app.route('/parse_customer_profile', methods=['POST'])
+def parse_customer_json():
     """
     Parses a JSON string containing customer profile information.
     
@@ -27,6 +23,8 @@ def parse_customer_json(json_string: str) -> dict:
     Returns:
         dict: Parsed customer profile dictionary
     """
+
+    json_string = request.get_json()
     try:
         # Parse the JSON string into a dictionary
         customer_profile = json.loads(json_string)
@@ -34,10 +32,9 @@ def parse_customer_json(json_string: str) -> dict:
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON: {e}")
         return {}
-    
 
 @app.route('/create_budget_from_profile', methods=['POST'])
-def create_budget_from_profile(customer_profile: dict) -> dict:
+def create_budget_from_profile():
     """
     Creates a budget based on customer profile information.
     
@@ -46,8 +43,16 @@ def create_budget_from_profile(customer_profile: dict) -> dict:
         
     Returns:
         dict: Budget breakdown in JSON format
+
+
+    This is the formatting that works: 
+    {"city": "Toronto", "province": "Ontario", "annual_income": "100000", "dependents": "2", 
+    "current_age": "30", "pension_plan": "100000", "savings": "10000", "tax_rate": 25.32, 
+    "inflation_rate": 2.87, "retirement_age": 64.0, "age_to_retirement": 34}
     """
     try:
+        customer_profile = request.get_json()
+
         # Extract relevant information from customer profile
         annual_income = float(customer_profile.get("annual_income", 0))
         dependents = int(customer_profile.get("dependents", 0))
@@ -149,26 +154,9 @@ def create_budget_from_profile(customer_profile: dict) -> dict:
         }
     
 @app.route('/goal_setting', methods=['POST'])
-
-def parse_customer_json(json_string: str) -> dict:
-    """
-    Parses a JSON string containing customer profile information.
-    
-    Args:
-        json_string (str): JSON string with customer profile data
-        
-    Returns:
-        dict: Parsed customer profile dictionary
-    """
-    try:
-        # Parse the JSON string into a dictionary
-        customer_profile = json.loads(json_string)
-        return customer_profile
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {e}")
-        return {}
-    
-def goal_setting(customer_profile: dict, budget: dict) -> dict:
+def goal_setting():
+    customer_profile = request.get_json()
+    budget = request.get_json()
     """
     Creates SMART financial goals based on customer profile and budget.
     
@@ -360,51 +348,64 @@ def get_receipt_total():
         print(f"Please retake your image. {image_path} is unclear")
         return 0
 
-
 @app.route('/get_customer_profile', methods=['POST'])
-def get_customer_profile(client_list: list) -> dict:
-    try:
-        list_of_items = ['city', 'province', 'annual_income', 'dependents', 'current_age', 'pension_plan', 'savings', 'tax_rate', 'inflation_rate', 'retirement_age', 'age_to_retirement']
-        # Create a Gemini model instance
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        
-        # Prompt for extracting the tax rate of the area    
-        prompt = f"""
-        what is the average tax rate for {client_list[0]} in {client_list[1]} Canada with an annual income of {client_list[2]}
+def get_customer_profile():
+    '''
+    Retrieves customer profile information and enriches it with tax rate, inflation rate,
+    retirement age, and years to retirement calculations.
+    
+    Expected input format:
+    [city, province, annual_income, dependents, current_age, pension_plan, savings]
+    
+    Returns:
+    JSON object with all customer profile information
+    '''
+    client_list = request.get_json()
 
-        Return only the percentage value.
-        """
-        # Get the response from Gemini
-        response = model.generate_content(prompt)
-        # Convert the response to a float
-        client_list.append(float(response.text.strip()))
-        
-        # Gets the average inflation in Canada
-        prompt = f"""
-        What is the average inflation rate of Canada for the past 5 years. 
+    genai.configure(api_key=gemini_api_key)
 
-        Return only the percentage value. Do not include the percent sign
-        """
-        response = model.generate_content(prompt)
-        # Convert the response to a float
-        client_list.append(float(response.text.strip()))
+    list_of_items = ['city', 'province', 'annual_income', 'dependents', 'current_age', 
+                        'pension_plan', 'savings', 'tax_rate', 'inflation_rate', 
+                        'retirement_age', 'age_to_retirement']
+    
+    # Create a Gemini model instance
+    model = genai.GenerativeModel('gemini-2.0-flash')
+    
+    # Prompt for extracting the tax rate of the area    
+    prompt = f"""
+    what is the average tax rate for {client_list[list_of_items[0]]} in {client_list[list_of_items[1]]} Canada with an annual income of {client_list[list_of_items[2]]}
 
-        # Average retirement age in Canada
-        prompt = f'''What is the average retirement age in Canada, answer in only 1 whole number'''
-        response = model.generate_content(prompt)
+    Return only the percentage value.
+    """
+    # Get the response from Gemini
+    response = model.generate_content(prompt)
+    # Convert the response to a float
+    client_list[list_of_items[7]] = float(response.text.strip())
+    
+    # Gets the average inflation in Canada
+    prompt = f"""
+    What is the average inflation rate of Canada for the past 5 years. 
 
-        # Convert the response to a float
-        client_list.append(float(response.text.strip()))
-        
-        client_list.append(int(client_list[9]) - int(client_list[4]))               
+    Return only the percentage value. Do not include the percent sign
+    """
+    response = model.generate_content(prompt)
+    # Convert the response to a float
+    client_list[list_of_items[8]] = float(response.text.strip())
 
-        my_dict = dict(zip(list_of_items, client_list))
+    # Average retirement age in Canada
+    prompt = f'''What is the average retirement age in Canada, answer in only 1 whole number'''
+    response = model.generate_content(prompt)
 
-        return json.dumps(my_dict)
+    # Convert the response to a float
+    client_list[list_of_items[9]] = float(response.text.strip())
+    
+    # Calculate years to retirement
+    client_list[list_of_items[10]] = float(response.text.strip()) - int(client_list["current_age"])          
+
+    return json.dumps(client_list)
     
 
-    except: 
-        print("Please provide valid information")
-        print(client_list)
-        print(response.text.strip())
-        return []
+
+app.run()
+
+# Start profile: {"city": "Toronto", "province": "Ontario", "annual_income": "100000", "dependents": "2", "current_age": "30", "pension_plan": "100000", "savings": "10000"}

@@ -414,6 +414,7 @@ json_string = """{"city": "Toronto", "province": "Ontario", "annual_income": "10
 "inflation_rate": 2.87, "retirement_age": 64.0, "age_to_retirement": 34}"""
 
 parsed_profile = parse_customer_json(json_string)
+print(parsed_profile)
 budget = create_budget_from_profile(parsed_profile)
 goals = goal_setting(parsed_profile, budget)
 
